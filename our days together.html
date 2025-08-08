@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Our Days Together</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cutive+Mono&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --periwinkle: #D3D8E8; /* page background */
+      --scarlet:    #c12a2a; /* bubble border/titles */
+      --cream:      #F8F7F0; /* bubble fill */
+      --text:       #2b2b2b;
+      --muted:      #616161;
+      --shadow-lg:  rgba(0,0,0,.16);
+      --shadow-sm:  rgba(0,0,0,.08);
+      --gap: 16px;
+      --radius: 20px;
+      --border: 4px;
+      --title-size: clamp(18px, 2.2vw, 28px);
+      --body-size:  clamp(14px, 1.4vw, 18px);
+      --large-size: clamp(28px, 5vw, 72px);
+    }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--periwinkle);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-auto-rows: minmax(160px, auto);
+      gap: var(--gap);
+      padding: calc(var(--gap) * 1.25);
+      max-width: 1800px;
+      margin: 0 auto;
+      box-sizing: border-box;
+    }
+    .bubble {
+      position: relative;
+      background: var(--cream);
+      border: var(--border) solid var(--scarlet);
+      border-radius: var(--radius);
+      /* Depth between border and background */
+      box-shadow:
+        0 14px 34px var(--shadow-lg),
+        0 4px 10px var(--shadow-sm);
+      outline: 1px solid rgba(255,255,255,.6);
+      outline-offset: -1px;
+      overflow: hidden;
+      padding: 14px 16px 16px 16px;
+    }
+    /* Title depth */
+    .title {
+      margin: 0 0 8px 0;
+      font-family: "Cutive Mono", monospace;
+      font-size: var(--title-size);
+      letter-spacing: .5px;
+      color: var(--scarlet);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.65), rgba(255,255,255,0.25));
+      box-shadow: 0 3px 10px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.8);
+    }
+
+    .row { display: flex; gap: 10px; align-items: center; }
+    button, input, textarea, select { font: inherit; font-size: var(--body-size); }
+    button {
+      background: white;
+      border: 2px solid var(--scarlet);
+      color: var(--scarlet);
+      border-radius: 10px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .5; cursor: default; }
+    input[type="text"], input[type="time"], input[type="number"], textarea, select {
+      width: 100%;
+      box-sizing: border-box;
+      border: 2px solid #d1d1d1;
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: #fff;
+    }
+    ul { list-style: none; padding: 0; margin: 10px 0 0 0; }
+    li { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+    li + li { border-top: 1px dashed #e4e4e4; }
+    .kill { margin-left: auto; border-color: #aaa; color: #555; }
+    .mini { font-size: 12px; color: var(--muted); }
+
+    /* Swapped placement: Row 1 -> clock(4) + timer(4) + tasks(4); Row 2 -> schedule(6) + video(6) */
+    #clock   { grid-column: span 4; }
+    #timer   { grid-column: span 4; }
+    #tasks   { grid-column: span 4; }
+    #schedule{ grid-column: span 6; }
+    #video   { grid-column: span 6; }
+    #picker  { grid-column: span 12; }
+
+    @media (max-width: 1100px) {
+      #clock, #timer, #tasks, #schedule, #video, #picker { grid-column: span 12; }
+    }
+
+    /* Clock */
+    .clock-face { font-size: var(--large-size); font-weight: 600; }
+    .date { color: var(--muted); font-size: calc(var(--body-size) * 1.1); }
+
+    /* Timer */
+    .time-inputs input { width: 80px; text-align: center; }
+    .big-timer { font-size: calc(var(--large-size) * 1.1); font-weight: 700; margin: 6px 0 10px; }
+    .flex-wrap { display:flex; gap:10px; flex-wrap: wrap; }
+
+    /* Video */
+    .video-wrap { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; }
+    .video-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+    /* Weekday pills */
+    .pillbar { display:flex; gap:8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .pillbar button { border-radius: 999px; padding: 4px 10px; }
+    .pillbar button[aria-pressed="true"] { background: var(--scarlet); color: white; }
+
+    /* Random Picker */
+    .big-name { font-size: clamp(28px, 6vw, 90px); font-weight: 700; margin: 8px 0; }
+    .tag { border:1px dashed #bbb; padding:2px 8px; border-radius:999px; font-size:14px; }
+  </style>
+</head>
+<body>
+  <main class="grid" id="app">
+    <!-- Clock -->
+    <section class="bubble" id="clock">
+      <h2 class="title">Clock & Date</h2>
+      <div class="clock-face" id="clockTime">--:--</div>
+      <div class="date" id="clockDate">—</div>
+    </section>
+
+    <!-- Timer (moved up, span 4) -->
+    <section class="bubble" id="timer">
+      <h2 class="title">Timer</h2>
+      <div class="row time-inputs">
+        <label class="row">Min <input type="number" id="min" min="0" value="5"></label>
+        <label class="row">Sec <input type="number" id="sec" min="0" max="59" value="0"></label>
+        <button id="setTimer" type="button">Set</button>
+        <button id="startPause" type="button">Start</button>
+        <button id="reset" type="button">Reset</button>
+      </div>
+      <div class="big-timer" id="timeReadout">05:00</div>
+      <div class="flex-wrap">
+        <button data-preset="1">+1 min</button>
+        <button data-preset="3">+3 min</button>
+        <button data-preset="5">+5 min</button>
+        <button data-preset="10">+10 min</button>
+      </div>
+    </section>
+
+    <!-- Tasks -->
+    <section class="bubble" id="tasks">
+      <h2 class="title">Task Checklist</h2>
+      <form id="taskForm" class="row" autocomplete="off">
+        <input type="text" id="taskText" placeholder="Add task (e.g., Turned in worksheets)" />
+        <button type="submit">Add</button>
+        <button type="button" id="resetTasks" title="Uncheck all">Reset ✓</button>
+      </form>
+      <ul id="taskList" aria-live="polite"></ul>
+      <p class="mini">Use for quick daily routines. Tasks persist; checkmarks can be reset anytime.</p>
+    </section>
+
+    <!-- Schedule (moved down, span 6) -->
+    <section class="bubble" id="schedule">
+      <h2 class="title">Daily Schedule</h2>
+      <div class="pillbar" role="tablist" aria-label="Weekdays">
+        <button type="button" class="daybtn" data-day="Mon" aria-pressed="true">Mon</button>
+        <button type="button" class="daybtn" data-day="Tue">Tue</button>
+        <button type="button" class="daybtn" data-day="Wed">Wed</button>
+        <button type="button" class="daybtn" data-day="Thu">Thu</button>
+        <button type="button" class="daybtn" data-day="Fri">Fri</button>
+      </div>
+      <form id="schedForm" class="row" autocomplete="off">
+        <input type="text" id="schedTime" placeholder="8:30 – 8:45" />
+        <input type="text" id="schedWhat" placeholder="Morning Meeting" />
+        <button type="submit" title="Add">Add</button>
+        <button type="button" id="copyToAll" title="Copy this day's schedule to all weekdays">Copy → All</button>
+      </form>
+      <ul id="schedList" aria-live="polite"></ul>
+      <p class="mini">Tip: drag to reorder (desktop), auto-saves per day.</p>
+    </section>
+
+    <!-- Video -->
+    <section class="bubble" id="video">
+      <h2 class="title">YouTube</h2>
+      <form id="ytForm" class="row" autocomplete="off">
+        <input type="text" id="ytUrl" placeholder="Paste a YouTube URL…" />
+        <button type="submit">Load</button>
+      </form>
+      <div class="video-wrap"><iframe id="ytFrame" allowfullscreen title="YouTube embed"></iframe></div>
+      <p class="mini">The last loaded video is remembered here.</p>
+    </section>
+
+    <!-- Random Picker -->
+    <section class="bubble" id="picker">
+      <h2 class="title">Random Picker</h2>
+      <div class="row">
+        <input type="text" id="rosterName" placeholder="Add student to roster" />
+        <button id="addName" type="button">Add</button>
+        <button id="importCSV" type="button">Import CSV</button>
+        <input id="fileCSV" type="file" accept=".csv,text/csv" style="display:none">
+        <button id="exportCSV" type="button">Export CSV</button>
+      </div>
+      <div class="row">
+        <button id="pickBtn" type="button">Pick Student</button>
+        <button id="undoPick" type="button">Undo</button>
+        <button id="resetToday" type="button">Reset Today</button>
+        <span class="tag" id="remainingTag">0 remaining today</span>
+      </div>
+      <div class="big-name" id="pickedName">—</div>
+      <div><strong>Today's picks:</strong> <span id="todayList"></span></div>
+    </section>
+  </main>
+
+  <script>
+    const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+    const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+    const todayKey = () => new Date().toISOString().slice(0,10);
+
+    /* Clock */
+    const clockTime = document.getElementById('clockTime');
+    const clockDate = document.getElementById('clockDate');
+    function tick() {
+      const now = new Date();
+      clockTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      clockDate.textContent = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    tick(); setInterval(tick, 1000);
+
+    /* Schedule (with weekday presets) */
+    const schedList = document.getElementById('schedList');
+    const schedForm = document.getElementById('schedForm');
+    const schedTime = document.getElementById('schedTime');
+    const schedWhat = document.getElementById('schedWhat');
+    const dayButtons = [...document.querySelectorAll('.daybtn')];
+    const copyToAll = document.getElementById('copyToAll');
+    let currentDay = load('schedule:currentDay', 'Mon');
+    function dayKey(d) { return 'schedule:'+d; }
+    function getDayArray(d) { return load(dayKey(d), []); }
+    function setDayArray(d, arr) { save(dayKey(d), arr); }
+    function renderSchedule() {
+      const items = getDayArray(currentDay);
+      schedList.innerHTML = '';
+      items.forEach((it, idx) => {
+        const li = document.createElement('li');
+        li.draggable = true;
+        li.innerHTML = `<strong>${it.time}</strong> — <span>${it.what}</span> <button class="kill" title="Remove">✕</button>`;
+        li.querySelector('.kill').addEventListener('click', () => {
+          const arr = getDayArray(currentDay);
+          arr.splice(idx, 1); setDayArray(currentDay, arr); renderSchedule();
+        });
+        li.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', idx));
+        li.addEventListener('dragover', e => e.preventDefault());
+        li.addEventListener('drop', e => {
+          e.preventDefault();
+          const from = +e.dataTransfer.getData('text/plain');
+          const arr = getDayArray(currentDay);
+          const [moved] = arr.splice(from,1);
+          arr.splice(idx,0,moved);
+          setDayArray(currentDay, arr); renderSchedule();
+        });
+        schedList.appendChild(li);
+      });
+      dayButtons.forEach(b => b.setAttribute('aria-pressed', b.dataset.day===currentDay?'true':'false'));
+      save('schedule:currentDay', currentDay);
+    }
+    dayButtons.forEach(b => b.addEventListener('click', () => { currentDay = b.dataset.day; renderSchedule(); }));
+    schedForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const time = schedTime.value.trim(); const what = schedWhat.value.trim();
+      if(!time || !what) return;
+      const arr = getDayArray(currentDay); arr.push({time, what}); setDayArray(currentDay, arr);
+      schedTime.value=''; schedWhat.value=''; renderSchedule();
+    });
+    copyToAll.addEventListener('click', () => {
+      const src = getDayArray(currentDay);
+      ['Mon','Tue','Wed','Thu','Fri'].forEach(d => setDayArray(d, JSON.parse(JSON.stringify(src))));
+      alert('Copied to Mon–Fri.');
+    });
+    renderSchedule();
+
+    /* Tasks */
+    const taskForm = document.getElementById('taskForm');
+    const taskText = document.getElementById('taskText');
+    const taskList = document.getElementById('taskList');
+    const resetTasks = document.getElementById('resetTasks');
+    function renderTasks() {
+      const arr = load('tasks', [
+        {name:'Turned in worksheets', done:false},
+        {name:'Tabletops cleaned', done:false},
+        {name:'Supplies checked', done:false},
+      ]);
+      taskList.innerHTML='';
+      arr.forEach((t, i) => {
+        const li = document.createElement('li');
+        const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=!!t.done;
+        const label = document.createElement('label'); label.textContent = t.name; label.style.flex='1'; label.style.cursor='pointer';
+        const del = document.createElement('button'); del.textContent='✕'; del.className='kill';
+        cb.addEventListener('change', () => { const a=load('tasks',[]); a[i].done=cb.checked; save('tasks',a); });
+        label.addEventListener('click', () => { cb.checked=!cb.checked; cb.dispatchEvent(new Event('change')); });
+        del.addEventListener('click', () => { const a=load('tasks',[]); a.splice(i,1); save('tasks',a); renderTasks(); });
+        li.append(cb,label,del);
+        taskList.appendChild(li);
+      });
+    }
+    taskForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const text = taskText.value.trim(); if(!text) return;
+      const arr = load('tasks', []); arr.push({name:text, done:false}); save('tasks', arr);
+      taskText.value=''; renderTasks();
+    });
+    resetTasks.addEventListener('click', () => { const arr=load('tasks',[]); arr.forEach(t=>t.done=false); save('tasks',arr); renderTasks(); });
+    renderTasks();
+
+    /* Timer */
+    const min = document.getElementById('min');
+    const sec = document.getElementById('sec');
+    const setBtn = document.getElementById('setTimer');
+    const startPause = document.getElementById('startPause');
+    const resetBtn = document.getElementById('reset');
+    const readout = document.getElementById('timeReadout');
+    let remaining = load('timer:remaining', 300);
+    let timerId = null;
+    const fmt = n => String(n).padStart(2,'0');
+    function draw() { readout.textContent = `${fmt(Math.floor(remaining/60))}:${fmt(remaining%60)}`; save('timer:remaining', remaining); }
+    function setFromInputs() {
+      const total = Math.max(0, (parseInt(min.value||'0')||0)*60 + (parseInt(sec.value||'0')||0));
+      remaining = total; draw();
+    }
+    function beep() {
+      try {
+        const ctx = new (window.AudioContext||window.webkitAudioContext)();
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type='sine'; o.frequency.value=880; g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime+0.01);
+        o.start(); o.stop(ctx.currentTime+0.3);
+      } catch(e) { console.log(e); }
+    }
+    function tickTimer(){
+      if(remaining>0) { remaining--; draw(); if(remaining===0) beep(); }
+      else { pause(); }
+    }
+    function start(){ if(timerId) return; timerId=setInterval(tickTimer,1000); startPause.textContent='Pause'; }
+    function pause(){ if(timerId){ clearInterval(timerId); timerId=null; startPause.textContent='Start'; } }
+    function reset(){ pause(); setFromInputs(); }
+    setBtn.onclick = reset; startPause.onclick = () => timerId?pause():start(); resetBtn.onclick = reset;
+    document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', ()=>{ remaining += (+b.dataset.preset)*60; draw(); }));
+    draw();
+
+    /* YouTube */
+    const ytForm = document.getElementById('ytForm');
+    const ytUrl  = document.getElementById('ytUrl');
+    const ytFrame= document.getElementById('ytFrame');
+    const getYouTubeId = (url) => String(url).match(/(?:youtu\.be\/|v=|embed\/)([A-Za-z0-9_-]{11})/)?.[1] || null;
+    const loadVideo = id => { if(!id) return; ytFrame.src = `https://www.youtube.com/embed/${id}`; save('yt:id', id); };
+    ytForm.addEventListener('submit', e => { e.preventDefault(); const id = getYouTubeId(ytUrl.value.trim()); if(id){ loadVideo(id); ytUrl.value=''; } else { alert('That link looks off. Paste a full YouTube URL.'); } });
+    const savedId = load('yt:id', null); if(savedId) loadVideo(savedId);
+
+    /* Random Picker */
+    const rosterName = document.getElementById('rosterName');
+    const addName = document.getElementById('addName');
+    const importCSV = document.getElementById('importCSV');
+    const exportCSV = document.getElementById('exportCSV');
+    const fileCSV = document.getElementById('fileCSV');
+    const pickBtn = document.getElementById('pickBtn');
+    const undoPick = document.getElementById('undoPick');
+    const resetToday = document.getElementById('resetToday');
+    const pickedName = document.getElementById('pickedName');
+    const todayList = document.getElementById('todayList');
+    const remainingTag = document.getElementById('remainingTag');
+
+    function roster() { return load('roster', []); }
+    function setRoster(arr) { save('roster', arr); updateRemaining(); }
+    function picksFor(date) { return load('picks:'+date, []); }
+    function setPicks(date, arr) { save('picks:'+date, arr); }
+    function updateRemaining() {
+      const r = roster();
+      const p = picksFor(todayKey());
+      const remaining = r.filter(n => !p.includes(n));
+      remainingTag.textContent = `${remaining.length} remaining today`;
+      todayList.textContent = p.join(', ');
+    }
+    addName.addEventListener('click', () => {
+      const n = rosterName.value.trim(); if(!n) return;
+      const r = roster(); if(!r.includes(n)) { r.push(n); setRoster(r); }
+      rosterName.value=''; updateRemaining();
+    });
+    importCSV.addEventListener('click', () => fileCSV.click());
+    fileCSV.addEventListener('change', () => {
+      const file = fileCSV.files?.[0]; if(!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const text = reader.result.toString();
+        const names = text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        setRoster(Array.from(new Set(names)));
+        alert('Roster imported.');
+        updateRemaining();
+      };
+      reader.readAsText(file);
+    });
+    exportCSV.addEventListener('click', () => {
+      const csv = roster().join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href=url; a.download='roster.csv'; a.click();
+      URL.revokeObjectURL(url);
+    });
+    pickBtn.addEventListener('click', () => {
+      const date = todayKey();
+      const r = roster(); if(r.length===0) return alert('Add roster names first.');
+      const p = picksFor(date);
+      const remaining = r.filter(n => !p.includes(n));
+      if(remaining.length===0) return alert('Everyone has been picked today. Reset today if needed.');
+      const choice = remaining[Math.floor(Math.random()*remaining.length)];
+      pickedName.textContent = choice;
+      p.push(choice); setPicks(date, p); updateRemaining();
+    });
+    undoPick.addEventListener('click', () => {
+      const date = todayKey();
+      const p = picksFor(date);
+      p.pop(); setPicks(date, p);
+      pickedName.textContent = '—'; updateRemaining();
+    });
+    resetToday.addEventListener('click', () => {
+      setPicks(todayKey(), []); pickedName.textContent='—'; updateRemaining();
+    });
+    updateRemaining();
+  </script>
+</body>
+</html>
